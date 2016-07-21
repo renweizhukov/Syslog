@@ -80,3 +80,81 @@ Jul 18 20:05:42 renwei-ubuntu ERROR Module-Name[22196]: This is an error message
 messages to a remote UNIX machine.
 
 3. logger+SysLogHandler can customize the format of the logging messages but syslog can't.
+
+## More about syslog.
+
+### Watch live syslog in a terminal.
+
+```bash
+$ tail -f /var/log/syslog
+```
+
+Here we assume that syslog is written into the log file /var/log/syslog.
+
+### Redirect the syslog messages to an unused tty session.
+
+Take Ubuntu 14.04 LTS as an example where tty12 is selected as the unused tty session.
+
+1. Grant the access for /dev/tty12 to the syslog user.
+
+    (1) Add the syslog user to the owner group tty of /dev/tty12.
+
+    ```bash
+    $ sudo gpasswd --add syslog tty
+    ```
+
+	(2) Grant the read and write access of /dev/tty12 to the group tty.
+
+	```bash
+	$ sudo chmod g+rw /dev/tty12
+	```
+
+    (3) Kill all processes owned by the syslog user.
+    
+    ```bash
+    $ sudo pkill -KILL -u syslog
+    ```
+
+    (4) Verify that the syslog user has been added to the group tty.
+
+    ```bash
+    $ groups syslog
+    ```
+
+2. Configure the syslog service to write the logging messages with the facility "user" to /dev/tty12.
+
+    ```bash
+    $ sudo vi /etc/rsyslog.d/50-default.conf
+    ```
+
+    Add the following line at the bottom of the conf file.
+
+    ```
+    user.*	|/dev/tty12
+    ```
+
+    The above "user" can be replaced by another facility or "*" (to match all facilities).
+
+    Then restart the syslog service to make effective the configuration change.
+
+    ```bash
+	$ sudo service rsyslog restart
+    ```
+    
+	Note that the syslog service on Ubuntu is named as "rsyslog".
+
+3. After running the C/Python exectuable, you can switch to the tty12 session either via "Ctrl + Alt + F12" or the command 
+	
+```bash
+$ sudo chvt 12
+```
+
+, and you should be able to view the syslog messages with the facility "user" there.
+
+If somehow the tty12 session hangs, you can switch back to the X session (i.e., the normal desktop), find the tty12 process, and kill it.
+
+```bash
+$ sudo fuser /dev/tty12
+$ sudo kill [process-ID]
+```
+
